@@ -38,5 +38,3 @@ The monitoring starts automatically when you log in.
 
 
 **Note:** You will receive notifications when CPU usage exceeds the set thresholds.
-
-```
