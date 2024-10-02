@@ -6,7 +6,7 @@ This macOS CPU monitoring script automatically tracks resource usage across all 
 
 ## Setup
 
-1. Download the script and save it to your home directory (/Users/YOUR_USERNAME).
+1. Download [the script](https://github.com/vladzima/mac-cpu-monitor/blob/main/setup_cpu_monitor.sh) and save it to your home directory (/Users/YOUR_USERNAME).
 2. Open Terminal and run the following command to make the script executable:
 
 ```
