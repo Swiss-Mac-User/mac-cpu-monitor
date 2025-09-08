@@ -27,16 +27,30 @@ fi
 prompt_with_default() {
     local prompt="$1"
     local default="$2"
-    read -p "$(echo -e ${YELLOW}$prompt [$default]: ${NC})" value
+    read -p "$(echo -e ${YELLOW}$prompt [recommended: $default]: ${NC})" value
     echo "${value:-$default}"
 }
 
-# Prompt for configuration
-echo -e "${BOLD}${BLUE}CPU Monitoring Setup${NC}"
-echo -e "${CYAN}Please configure the following settings:${NC}\n"
-cpu_threshold=$(prompt_with_default "Enter CPU usage threshold percentage" 50)
-system_threshold=$(prompt_with_default "Enter overall system CPU threshold percentage" 200)
-check_interval=$(prompt_with_default "Enter check interval in seconds" 300)
+# Evaluate system for recommended thresholds
+number_cores="$(sysctl -n hw.ncpu)"
+# > assumption: 25% of total system capacity, clamped to [min: 120%, max: 400%]
+cpu_threshold_recommended=$(( $number_cores * 100 * 25 / 100 ))
+[ "$cpu_threshold_recommended" -lt 120 ] && cpu_threshold_recommended=120
+[ "$cpu_threshold_recommended" -gt 400 ] && cpu_threshold_recommended=400
+# > assumption: 85% of total system capacity
+system_threshold_recommended=$(( $number_cores * 100 * 85 / 100 ))
+# > assumption: 60s per core, clamp to [min: 1minute, max: 10minute]
+check_interval_recommended=$(( $number_cores * 60 ))
+[ "$check_interval_recommended" -lt 60 ] && check_interval_recommended=60
+[ "$check_interval_recommended" -gt 600 ] && check_interval_recommended=600
+
+# Prompt for configuration using calculated recommendations
+echo -e "${BOLD}${BLUE}CPU Monitoring Setup${NC}\n"
+echo -e "${CYAN}Please configure the following settings:${NC}"
+echo -e "[ Your System: ${BOLD}$number_cores CPU${NC} CPU cores (= $(( $number_cores * 100 ))% total capacity) ]\n"
+cpu_threshold=$(prompt_with_default "Enter single Process % CPU usage threshold" $cpu_threshold_recommended)
+system_threshold=$(prompt_with_default "Enter overall System % CPU threshold" $system_threshold_recommended)
+check_interval=$(prompt_with_default "Enter check interval in seconds" $check_interval_recommended)
 
 # Create the monitoring script
 cat << EOF > "$save_script"
@@ -115,21 +129,27 @@ EOF
 launchctl unload ~/Library/LaunchAgents/com.user.cpumonitor.plist 2>/dev/null
 launchctl load ~/Library/LaunchAgents/com.user.cpumonitor.plist
 
+# Calculate percentage of total capacity (with proper decimal handling)
+single_process_percent=$(echo "scale=1; $cpu_threshold / $number_cores" | bc -l)
+system_percent=$(echo "scale=1; $system_threshold / $number_cores" | bc -l)
+check_interval_minutes=$(( $check_interval / 60 ))
+
 # Display setup information and usage instructions
-echo -e "\n${BOLD}${GREEN}CPU Monitoring Setup Complete${NC}"
-
-echo -e "\n${BOLD}${CYAN}Configuration:${NC}"
-echo -e "- CPU usage threshold: ${YELLOW}$cpu_threshold%${NC}"
-echo -e "- System CPU threshold: ${YELLOW}$system_threshold%${NC}"
-echo -e "- Check interval: Every ${YELLOW}$check_interval seconds${NC}"
-
-echo -e "\n${BOLD}${MAGENTA}Usage Instructions:${NC}"
-echo -e "1. The monitoring is now active and will start automatically when you log in."
-echo -e "\n2. To reconfigure CPU monitoring:"
-echo -e "   ${BLUE}~/setup_cpu_monitor.sh${NC}"
-echo -e "\n3. To stop CPU monitoring:"
-echo -e "   ${BLUE}~/setup_cpu_monitor.sh stop${NC}"
 echo -e "\n4. To manually start monitoring after stopping:"
 echo -e "   ${BLUE}launchctl load ~/Library/LaunchAgents/com.user.cpumonitor.plist${NC}"
 
 echo -e "\n${BOLD}${RED}Note:${NC} You will receive notifications when CPU usage exceeds the set thresholds."
+echo -e "\n✅ ${BOLD}${GREEN}CPU Monitoring Setup Complete${NC}"
+echo -e "${BOLD}The monitoring is now ${GREEN}active${NC} and will start automatically when you log in."
+echo -e "${BOLD}${YELLOW}Note:${NC} You will receive notifications when CPU usage exceeds the set thresholds."
+
+echo -e "\n${BOLD}${CYAN}Alerting Thresholds:${NC}"
+echo -e "- Single Process % CPU usage threshold: ${YELLOW}$cpu_threshold%${NC} (${single_process_percent}% of total capacity)"
+echo -e "- Overall System % CPU threshold: ${YELLOW}$system_threshold%${NC} (${system_percent}% of total capacity)"
+echo -e "- Check interval: Every ${YELLOW}$check_interval seconds${NC} ($check_interval_minutes minute$([ "$check_interval_minutes" -ne 1 ] && echo "s"))"
+
+echo -e "\nℹ️ ${BOLD}${MAGENTA}Usage Instructions:${NC}"
+echo -e "\n1. To reconfigure CPU monitoring:"
+echo -e "   ${BLUE}$(printf '%q' $0)${NC}"
+echo -e "\n2. To stop CPU monitoring:"
+echo -e "   ${BLUE}$(printf '%q' $0) stop${NC}"
