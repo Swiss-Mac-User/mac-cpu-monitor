@@ -10,11 +10,19 @@ CYAN='\033[0;36m'
 BOLD='\033[1m'
 NC='\033[0m' # No Color
 
+# Settings
+launchd_plist="$HOME/Library/LaunchAgents/com.user.cpumonitor.plist"
 save_script="$(cd "$(dirname "$0")" && pwd)/cpu_monitor.sh"
+user_uid=$(id -u)
+
 # Function to stop monitoring
 stop_monitoring() {
-    launchctl unload ~/Library/LaunchAgents/com.user.cpumonitor.plist 2>/dev/null
+    launchctl disable gui/$user_uid/com.user.cpumonitor
+    launchctl bootout gui/$user_uid/com.user.cpumonitor
+
     echo -e "🛑 ${BOLD}${RED}CPU monitoring stopped.${NC}"
+    echo -e "\nTo manually re-start monitoring with same thresholds:"
+    echo -e "   ${BLUE}launchctl enable gui/$user_uid/com.user.cpumonitor && launchctl bootstrap gui/$user_uid "$launchd_plist"${NC}"
     exit 0
 }
 
@@ -107,7 +115,7 @@ EOF
 chmod +x "$save_script"
 
 # Create the launchd plist file
-cat << EOF > ~/Library/LaunchAgents/com.user.cpumonitor.plist
+cat << EOF > "$launchd_plist"
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -128,8 +136,10 @@ cat << EOF > ~/Library/LaunchAgents/com.user.cpumonitor.plist
 EOF
 
 # Load the launchd job
-launchctl unload ~/Library/LaunchAgents/com.user.cpumonitor.plist 2>/dev/null
-launchctl load ~/Library/LaunchAgents/com.user.cpumonitor.plist
+launchctl bootout gui/$user_uid "$launchd_plist" 2>/dev/null || true
+launchctl enable gui/$user_uid/com.user.cpumonitor
+launchctl bootstrap gui/$user_uid "$launchd_plist"
+launchctl kickstart -k gui/$user_uid/com.user.cpumonitor
 
 # Calculate percentage of total capacity (with proper decimal handling)
 single_process_percent=$(echo "scale=1; $cpu_threshold / $number_cores" | bc -l)
@@ -137,10 +147,6 @@ system_percent=$(echo "scale=1; $system_threshold / $number_cores" | bc -l)
 check_interval_minutes=$(( $check_interval / 60 ))
 
 # Display setup information and usage instructions
-echo -e "\n4. To manually start monitoring after stopping:"
-echo -e "   ${BLUE}launchctl load ~/Library/LaunchAgents/com.user.cpumonitor.plist${NC}"
-
-echo -e "\n${BOLD}${RED}Note:${NC} You will receive notifications when CPU usage exceeds the set thresholds."
 echo -e "\n✅ ${BOLD}${GREEN}CPU Monitoring Setup Complete${NC}"
 echo -e "${BOLD}The monitoring is now ${GREEN}active${NC} and will start automatically when you log in."
 echo -e "${BOLD}${YELLOW}Note:${NC} You will receive notifications when CPU usage exceeds the set thresholds."
@@ -155,3 +161,5 @@ echo -e "\n1. To reconfigure CPU monitoring:"
 echo -e "   ${BLUE}$(printf '%q' $0)${NC}"
 echo -e "\n2. To stop CPU monitoring:"
 echo -e "   ${BLUE}$(printf '%q' $0) stop${NC}"
+echo -e "\n3. To manually start monitoring after stopping:"
+echo -e "   ${BLUE}launchctl kickstart gui/$user_uid/com.user.cpumonitor${NC}"
