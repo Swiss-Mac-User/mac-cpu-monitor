@@ -14,7 +14,7 @@ save_script="$(cd "$(dirname "$0")" && pwd)/cpu_monitor.sh"
 # Function to stop monitoring
 stop_monitoring() {
     launchctl unload ~/Library/LaunchAgents/com.user.cpumonitor.plist 2>/dev/null
-    echo -e "${GREEN}CPU monitoring stopped.${NC}"
+    echo -e "🛑 ${BOLD}${RED}CPU monitoring stopped.${NC}"
     exit 0
 }
 
@@ -58,7 +58,7 @@ cat << EOF > "$save_script"
 
 # Function to send notification
 send_notification() {
-    /usr/bin/osascript -e "display notification \"\$1\" with title \"CPU Usage Alert\" subtitle \"\$2\""
+    osascript -e "display notification \"\$1\" with title \"CPU Usage Alert\" subtitle \"\$2\""
 }
 
 # Set the CPU usage threshold (in percentage)
@@ -87,8 +87,8 @@ done <<< "\$process_list"
 
 # If we found any high CPU processes, send a notification
 if [ ! -z "\$high_cpu_processes" ]; then
-    message="The following processes are using high CPU:\n\$high_cpu_processes"
-    send_notification "\$message" "High CPU Usage"
+    message="\$high_cpu_processes"
+    send_notification "\$message" "📈 Processes using high CPU"
 fi
 
 # Check overall system CPU usage
@@ -96,8 +96,8 @@ total_cpu=\$(/bin/ps -A -o %cpu | awk '{s+=\$1} END {print s}')
 system_threshold=$system_threshold
 
 if (( \$(echo "\$total_cpu > \$system_threshold" | bc -l) )); then
-    message="Overall CPU usage is high: \${total_cpu}%"
-    send_notification "\$message" "System Alert"
+    message="\${total_cpu}%"
+    send_notification "🔥 \$message" "Overall System CPU usage is high"
 fi
 EOF
 
