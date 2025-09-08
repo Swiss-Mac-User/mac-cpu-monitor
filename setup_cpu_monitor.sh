@@ -10,6 +10,7 @@ CYAN='\033[0;36m'
 BOLD='\033[1m'
 NC='\033[0m' # No Color
 
+save_script="$(cd "$(dirname "$0")" && pwd)/cpu_monitor.sh"
 # Function to stop monitoring
 stop_monitoring() {
     launchctl unload ~/Library/LaunchAgents/com.user.cpumonitor.plist 2>/dev/null
@@ -38,7 +39,7 @@ system_threshold=$(prompt_with_default "Enter overall system CPU threshold perce
 check_interval=$(prompt_with_default "Enter check interval in seconds" 300)
 
 # Create the monitoring script
-cat << EOF > ~/cpu_monitor.sh
+cat << EOF > "$save_script"
 #!/bin/bash
 
 # Function to send notification
@@ -87,7 +88,7 @@ fi
 EOF
 
 # Make the script executable
-chmod +x ~/cpu_monitor.sh
+chmod +x "$save_script"
 
 # Create the launchd plist file
 cat << EOF > ~/Library/LaunchAgents/com.user.cpumonitor.plist
@@ -100,7 +101,7 @@ cat << EOF > ~/Library/LaunchAgents/com.user.cpumonitor.plist
     <key>ProgramArguments</key>
     <array>
         <string>/bin/bash</string>
-        <string>$HOME/cpu_monitor.sh</string>
+        <string>$save_script</string>
     </array>
     <key>StartInterval</key>
     <integer>$check_interval</integer>
