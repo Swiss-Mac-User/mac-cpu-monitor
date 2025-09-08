@@ -76,8 +76,10 @@ while read -r cpu_usage app_name; do
     if [[ \$cpu_usage =~ ^[0-9]+([.][0-9]+)?\$ ]]; then
         # Compare usage to threshold
         if (( \$(echo "\$cpu_usage > \$CPU_THRESHOLD" | bc -l) )); then
+            # Extract just the app name from the full path
+            app_display_name=\$(basename "\$app_name")
             # Add this process to our list of high CPU processes
-            high_cpu_processes+="\$app_name: \${cpu_usage}%\n"
+            high_cpu_processes+="\$app_display_name | \${cpu_usage}%\n"
         else
             # Since the list is sorted, we can break once we hit a process below threshold
             break
