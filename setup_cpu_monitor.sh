@@ -73,7 +73,7 @@ send_notification() {
 CPU_THRESHOLD=$cpu_threshold
 
 # Get the list of all processes with their CPU usage, sort by CPU usage descending
-process_list=\$(/bin/ps -A -o %cpu,comm | sort -nr)
+process_list=\$(ps -A -r -o %cpu,comm)
 
 # Initialize a variable to store high CPU processes
 high_cpu_processes=""
@@ -102,7 +102,7 @@ if [ ! -z "\$high_cpu_processes" ]; then
 fi
 
 # Check overall system CPU usage
-total_cpu=\$(/bin/ps -A -o %cpu | awk '{s+=\$1} END {print s}')
+total_cpu=\$(ps -A -o %cpu | awk '{s+=\$1} END {print s}')
 system_threshold=$system_threshold
 
 if (( \$(echo "\$total_cpu > \$system_threshold" | bc -l) )); then
