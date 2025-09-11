@@ -55,7 +55,7 @@ check_interval_recommended=$(( $number_cores * 60 ))
 # Prompt for configuration using calculated recommendations
 echo -e "${BOLD}${BLUE}CPU Monitoring Setup${NC}\n"
 echo -e "${CYAN}Please configure the following settings:${NC}"
-echo -e "[ Your System: ${BOLD}$number_cores CPU${NC} CPU cores (= $(( $number_cores * 100 ))% total capacity) ]\n"
+echo -e "[ Your System: ${BOLD}$number_cores${NC} CPU cores (= $(( $number_cores * 100 ))% total capacity) ]\n"
 cpu_threshold=$(prompt_with_default "Enter single Process % CPU usage threshold" $cpu_threshold_recommended)
 system_threshold=$(prompt_with_default "Enter overall System % CPU threshold" $system_threshold_recommended)
 check_interval=$(prompt_with_default "Enter check interval in seconds" $check_interval_recommended)
